@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat with Username</title>
+    <style>
+        #chatBox {
+            width: 100%;
+            height: 300px;
+            border: 1px solid black;
+            overflow-y: scroll;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        #messageInput {
+            width: 80%;
+            padding: 10px;
+        }
+        #sendButton {
+            width: 15%;
+            padding: 10px;
+        }
+        #usernameInput, #startChatButton {
+            display: block;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<h2>WebSocket Chat</h2>
+
+<!-- Username Input and Start Chat Button -->
+<input type="text" id="usernameInput" placeholder="Enter your username...">
+<button id="startChatButton" onclick="startChat()">Start Chat</button>
+
+<!-- Chat Box to display messages -->
+<div id="chatBox"></div>
+
+<!-- Message Input and Send Button (Hidden initially) -->
+<input type="text" id="messageInput" placeholder="Enter message here..." disabled>
+<button id="sendButton" onclick="sendMessage()" disabled>Send</button>
+
+<script>
+    var socket;
+    var username = "";
+
+    // Initialize WebSocket connection
+    function initWebSocket() {
+        socket = new WebSocket("ws://localhost:8080/chat");
+
+        socket.onopen = function(event) {
+            console.log("WebSocket connection established");
+        };
+
+        socket.onmessage = function(event) {
+            console.log("Message from server: " + event.data);
+            appendMessage(event.data);
+        };
+
+        socket.onerror = function(event) {
+            console.error("WebSocket error observed:", event);
+        };
+
+        socket.onclose = function(event) {
+            console.log("WebSocket connection closed. Reconnecting...");
+            setTimeout(initWebSocket, 1000);  // Attempt to reconnect after 1 second
+        };
+    }
+
+    // Append received message to chat box
+    function appendMessage(message) {
+        var chatBox = document.getElementById("chatBox");
+        var messageElement = document.createElement("div");
+        messageElement.textContent = message;
+        chatBox.appendChild(messageElement);
+
+        // Scroll to the bottom of the chat box
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Handle starting the chat (get username)
+    function startChat() {
+        var usernameInput = document.getElementById("usernameInput");
+        username = usernameInput.value.trim();
+
+        if (username) {
+            document.getElementById("messageInput").disabled = false;
+            document.getElementById("sendButton").disabled = false;
+            usernameInput.disabled = true;
+            document.getElementById("startChatButton").disabled = true;
+            initWebSocket();
+        } else {
+            alert("Please enter a username.");
+        }
+    }
+
+    // Send message to WebSocket server with the username
+    function sendMessage() {
+        var messageInput = document.getElementById("messageInput");
+        var message = messageInput.value.trim();
+
+        if (message) {
+            var fullMessage = username + ": " + message;
+
+            // Check if WebSocket is open before sending a message
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(fullMessage);
+                messageInput.value = '';  // Clear input field after sending
+            } else {
+                console.log("WebSocket is not open. Cannot send message.");
+            }
+        }
+    }
+
+    // Initialize WebSocket connection when the page loads
+    window.onload = function() {
+        document.getElementById("messageInput").disabled = true;
+        document.getElementById("sendButton").disabled = true;
+    };
+</script>
+</body>
+</html>
